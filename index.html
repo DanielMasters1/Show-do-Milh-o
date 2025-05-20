@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Show do Milhão - TI Básico</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: radial-gradient(circle at center, #040404 5%, #0a0a0a 95%);
+    font-family: 'Montserrat', sans-serif;
+    color: #fff;
+    overflow-x: hidden;
+  }
+  #game-container {
+    max-width: 960px;
+    margin: 12px auto 40px;
+    background: radial-gradient(circle at center, #111 20%, #000 100%);
+    border-radius: 15px;
+    box-shadow: 0 0 35px #ffd700aa;
+    padding: 20px;
+    user-select:none;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 18px;
+    user-select:none;
+  }
+  header h1 {
+    font-size: 2.8rem;
+    color: #ffd700;
+    text-shadow: 0 0 12px #ffd700cc, 0 0 8px #ffbc00cc;
+    margin: 0;
+  }
+  header #level {
+    font-size: 1rem;
+    color:#ccc;
+    margin-top: 4px;
+    user-select:none;
+  }
+  #prizeboard {
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 1.6rem;
+    letter-spacing: 3px;
+    color: #ffde59;
+    font-weight: 700;
+    text-shadow: 0 0 12px #ffde59aa;
+  }
+
+  #question-container {
+    background: linear-gradient(135deg, #1a1a1a, #222);
+    border-radius: 20px;
+    padding: 20px 28px;
+    box-shadow:
+      inset 0 0 10px #ffdb00aa,
+      0 0 25px #ffd000cc;
+    max-width: 850px;
+    margin: 0 auto 30px;
+    position: relative;
+  }
+
+  #question-text {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    text-align: center;
+    color: #ffd700;
+    text-shadow: 0 0 6px #ffdc00cc;
+    user-select:none;
+  }
+
+  /* Answers grid similar to Show do Milhão */
+  #answers {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    user-select:none;
+  }
+  .answer-card {
+    background: linear-gradient(135deg, #222, #141414);
+    border-radius: 14px;
+    padding: 16px;
+    cursor: pointer;
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-align: center;
+    color: #eee;
+    filter: drop-shadow(0 0 5px #000);
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  .answer-card:hover {
+    background: linear-gradient(135deg, #ffd700, #ffcc00);
+    color: #000;
+    filter: drop-shadow(0 0 25px #ffd700);
+  }
+  .answer-card.disabled {
+    pointer-events: none;
+    opacity: 0.45;
+  }
+
+  /* Correct and incorrect styles */
+  .answer-card.correct {
+    background: linear-gradient(135deg, #198f00, #4caf50);
+    color: #e0f7e0;
+    filter: drop-shadow(0 0 20px #4caf50);
+  }
+  .answer-card.incorrect {
+    background: linear-gradient(135deg, #8b0000, #b22222);
+    color: #f5bebe;
+    filter: drop-shadow(0 0 20px #b22222);
+  }
+
+  /* Lifelines section */
+  #lifelines-container {
+    max-width: 960px;
+    margin: 12px auto 0;
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    user-select:none;
+  }
+  .lifeline {
+    width: 135px;
+    background: linear-gradient(135deg, #222, #111);
+    border-radius: 14px;
+    text-align: center;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 0 10px #000;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 14px 12px;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  .lifeline.disabled {
+    cursor: default;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .lifeline:hover:not(.disabled) {
+    background: linear-gradient(135deg, #ffd700, #ffcc00);
+    color: #000;
+    box-shadow:
+      0 0 24px #ffd700,
+      inset 0 0 20px #ffde00;
+  }
+  .lifeline-label {
+    margin-top: 10px;
+  }
+
+  /* Icons in lifelines */
+  .lifeline-icon {
+    font-size: 36px;
+    user-select:none;
+  }
+
+  /* Popup for lifeline help - orange highlight */
+  #help-popup {
+    position: fixed;
+    bottom: 65px;
+    right: 20px;
+    max-width: 390px;
+    background: rgba(0,0,0,0.85);
+    border: 2px solid #ffdb00;
+    border-radius: 12px;
+    box-shadow: 0 0 24px #ffdb00cc;
+    color: #ffd500;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 14px 18px;
+    z-index: 20;
+    text-align: center;
+    display: none;
+    user-select:none;
+    line-height: 1.3;
+    pointer-events: none;
+  }
+
+  /* Overlay behind the question for lifeline effects */
+  #overlay-fader {
+    pointer-events:none;
+    position: absolute;
+    inset: 0;
+    background:#00000099;
+    border-radius: 20px;
+    display: none;
+    z-index:10;
+    user-select:none;
+  }
+
+  /* Button style for "Next" after answer */
+  #next-btn {
+    margin-top: 24px;
+    background: #ffca00;
+    border: none;
+    border-radius: 14px;
+    padding: 12px 30px;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #000;
+    cursor: pointer;
+    box-shadow: 0 0 18px #ffca0080;
+    display: none;
+    user-select:none;
+    transition: all 0.2s ease;
+
+  }
+  #next-btn:hover {
+    background: #ffdb3c;
+    box-shadow: 0 0 24px #ffd500cc;
+  }
+
+  /* Button style for "Parar" to stop game and take money */
+  #stop-btn {
+    margin-top: 20px;
+    background: #333;
+    border: 2px solid #ffd500;
+    border-radius: 14px;
+    padding: 12px 28px;
+    font-weight: 600;
+    font-size: 1.15rem;
+    color: #ffd500;
+    cursor: pointer;
+    box-shadow: 0 0 15px #ffd500aa;
+    user-select:none;
+    float: right;
+    margin-right: 10px;
+    transition: all 0.3s ease;
+  }
+  #stop-btn:hover {
+    background: #ffd500;
+    color: #111;
+    box-shadow: 0 0 30px #ffd500ff;
+  }
+  #stop-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+    box-shadow: none;
+  }
+
+  /* Lifeline usage animations or highlight */
+  .highlight-answer {
+    animation: glowPulse 2s ease infinite alternate;
+  }
+  @keyframes glowPulse {
+    0% { box-shadow: 0 0 8px #ffd700; }
+    50% { box-shadow: 0 0 20px #ffd700; }
+    100% { box-shadow: 0 0 8px #ffd700; }
+  }
+
+  /* Footer credit */
+  footer {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 30px;
+    user-select:none;
+  }
+
+</style>
+</head>
+<body>
+  <div id="game-container" role="main" aria-labelledby="game-title" aria-describedby="game-desc">
+    <header>
+      <h1 id="game-title" tabindex="0">Show do Milhão - TI Básico</h1>
+      <div id="level" tabindex="0">Pergunta 1 / 15</div>
+    </header>
+    <div id="prizeboard" tabindex="0" aria-live="polite" aria-atomic="true">Dinheiro atual: R$ 0</div>
+    <section id="question-container" aria-live="polite" aria-atomic="true" aria-label="Pergunta atual">
+      <div id="overlay-fader"></div>
+      <div id="question-text">Carregando pergunta...</div>
+      <div id="answers" role="list" aria-label="Alternativas da pergunta">
+        <!-- Answer cards go here -->
+      </div>
+      <button id="next-btn" aria-label="Próxima pergunta">Próxima</button>
+      <button id="stop-btn" aria-label="Parar e garantir o dinheiro atual" disabled>Parar e ganhar</button>
+    </section>
+    <section id="lifelines-container" aria-label="Ajuda disponível, escolha uma ajuda para usar">
+      <div id="lifeline-skip" class="lifeline" role="button" tabindex="0" aria-pressed="false" aria-describedby="desc-skip">
+        <div class="lifeline-icon" aria-hidden="true">⏭️</div>
+        <div class="lifeline-label" id="desc-skip">Pular Pergunta (restam <span id="skip-count">3</span>)</div>
+      </div>
+      <div id="lifeline-placas" class="lifeline" role="button" tabindex="0" aria-pressed="false" aria-describedby="desc-placas">
+        <div class="lifeline-icon" aria-hidden="true">📋</div>
+        <div class="lifeline-label" id="desc-placas">Placas Decidem</div>
+      </div>
+      <div id="lifeline-universitarios" class="lifeline" role="button" tabindex="0" aria-pressed="false" aria-describedby="desc-universitarios">
+        <div class="lifeline-icon" aria-hidden="true">🎓</div>
+        <div class="lifeline-label" id="desc-universitarios">Universitários Palpitam</div>
+      </div>
+      <div id="lifeline-cartas" class="lifeline" role="button" tabindex="0" aria-pressed="false" aria-describedby="desc-cartas">
+        <div class="lifeline-icon" aria-hidden="true">🃏</div>
+        <div class="lifeline-label" id="desc-cartas">Cartas Eliminam</div>
+      </div>
+    </section>
+    <div id="help-popup" role="alert" aria-live="assertive"></div>
+  </div>
+  <footer>Feito por BLACKBOXAI &copy; 2024</footer>
+
+<script>
+(() => {
+  // Questions about basic IT (same questions used previously plus a few more for total 15)
+  const questions = [
+    {
+      question: 'O que significa a sigla "CPU"?',
+      answers: ['Central Processing Unit', 'Computer Personal Unit', 'Control Processing User', 'Central Power Unit'],
+      correctIndex: 0
+    },
+    {
+      question: 'Qual dispositivo é usado para armazenar dados permanentemente no computador?',
+      answers: ['Memória RAM', 'HD (Disco Rígido)', 'CPU', 'Monitor'],
+      correctIndex: 1
+    },
+    {
+      question: 'Qual dos seguintes é um sistema operacional?',
+      answers: ['HTML', 'Windows', 'Google', 'JavaScript'],
+      correctIndex: 1
+    },
+    {
+      question: 'A sigla "RAM" significa:',
+      answers: ['Read Access Memory', 'Random Actual Memory', 'Random Access Memory', 'Run Access Memory'],
+      correctIndex: 2
+    },
+    {
+      question: 'Um endereço de IP é usado para:',
+      answers: ['Identificar um dispositivo na internet', 'Aumentar a velocidade do processador', 'Armazenar dados', 'Formatar o computador'],
+      correctIndex: 0
+    },
+    {
+      question: 'HTML é uma linguagem usada para:',
+      answers: ['Criar páginas web', 'Programar jogos', 'Gerenciar banco de dados', 'Editar imagens'],
+      correctIndex: 0
+    },
+    {
+      question: 'Qual significado da sigla USB?',
+      answers: ['Universal Serial Bus', 'Unique System Bit', 'Universal Software Base', 'Uniform Serial Byte'],
+      correctIndex: 0
+    },
+    {
+      question: 'O que é um firewall em TI?',
+      answers: ['Um dispositivo para aumentar a memória', 'Um software para proteger contra ataques', 'Um tipo de processador', 'Um programa para edição de vídeos'],
+      correctIndex: 1
+    },
+    {
+      question: 'O que faz o botão direito do mouse?',
+      answers: ['Seleciona uma opção do menu contextual', 'Clique duplo', 'Abre o navegador', 'Fecha a janela'],
+      correctIndex: 0
+    },
+    {
+      question: 'Qual das opções representa um formato de arquivo de imagem?',
+      answers: ['.exe', '.mp3', '.png', '.docx'],
+      correctIndex: 2
+    },
+    {
+      question: "O que significa 'HTTP' na internet?",
+      answers: ["Hypertext Transfer Protocol", "Highly Tested Transfer Process", "Hyper Text Technical Program", "Hyper Transfer Text Protocol"],
+      correctIndex: 0
+    },
+    {
+      question: "Qual componente é considerado o 'cérebro' do computador?",
+      answers: ["Memória RAM", "CPU", "Placa de vídeo", "Disco rígido"],
+      correctIndex: 1
+    },
+    {
+      question: "O que faz um SSD?",
+      answers: ["Armazena dados rapidamente", "Processa informações", "Controla a rede", "Executa programas"],
+      correctIndex: 0
+    },
+    {
+      question: "Qual a função principal do sistema operacional?",
+      answers: ["Gerenciar hardware e software", "Armazenar dados", "Criar sites", "Editar textos"],
+      correctIndex: 0
+    },
+    {
+      question: "O que é um 'software livre'?",
+      answers: ["Software de código aberto e gratuito", "Software pago", "Software com bugs", "Hardware"],
+      correctIndex: 0
+    }
+  ];
+
+  // Prize amounts like Show do Milhão
+  const prizeLevels = [
+    "R$ 100", "R$ 200", "R$ 300", "R$ 500", "R$ 1.000",
+    "R$ 2.000", "R$ 3.000", "R$ 5.000", "R$ 7.000", "R$ 10.000",
+    "R$ 15.000", "R$ 25.000", "R$ 50.000", "R$ 75.000", "R$ 150.000"
+  ];
+
+  // Guaranteed milestones at question indices 4 and 9 (after 5th and 10th)
+  const guaranteedMilestones = [4, 9];
+
+  // Game variables
+  let currentQuestionIndex = 0;
+  let money = 0;
+  let moneySafe = 0; // Last guaranteed safe money if player misses a question
+  let usedLifelines = {
+    skip: 0,
+    placas: false,
+    universitarios: false,
+    cartas: false
+  };
+
+  // Elements
+  const questionTextElem = document.getElementById('question-text');
+  const answersElem = document.getElementById('answers');
+  const prizeboardElem = document.getElementById('prizeboard');
+  const levelElem = document.getElementById('level');
+  const nextBtn = document.getElementById('next-btn');
+  const stopBtn = document.getElementById('stop-btn');
+  const helpPopup = document.getElementById('help-popup');
+  const overlayFader = document.getElementById('overlay-fader');
+
+  // Lifeline elements
+  const lifelineSkip = document.getElementById('lifeline-skip');
+  const lifelinePlacas = document.getElementById('lifeline-placas');
+  const lifelineUniversitarios = document.getElementById('lifeline-universitarios');
+  const lifelineCartas = document.getElementById('lifeline-cartas');
+  const skipCountElem = document.getElementById('skip-count');
+
+  // State
+  let selectedAnswer = null;
+  let canAnswer = true;
+  let currentShuffledAnswers = [];
+  let currentCorrectAnswerIndex = 0;
+
+  // Initialize game UI on load
+  function initGame() {
+    updateSkipCount();
+    updatePrizeboard();
+    setLevel();
+    renderQuestion();
+
+    lifelineSkip.addEventListener('click', () => useLifeline('skip'));
+    lifelinePlacas.addEventListener('click', () => useLifeline('placas'));
+    lifelineUniversitarios.addEventListener('click', () => useLifeline('universitarios'));
+    lifelineCartas.addEventListener('click', () => useLifeline('cartas'));
+
+    nextBtn.addEventListener('click', () => nextQuestion());
+    stopBtn.addEventListener('click', () => stopGame());
+
+    [lifelineSkip, lifelinePlacas, lifelineUniversitarios, lifelineCartas].forEach(el => {
+      el.addEventListener('keydown', e => {
+        if(e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          el.click();
+        }
+      });
+    });
+  }
+
+  // Update skip count UI
+  function updateSkipCount() {
+    skipCountElem.textContent = 3 - usedLifelines.skip;
+    if(usedLifelines.skip >= 3) {
+      lifelineSkip.classList.add('disabled');
+      lifelineSkip.setAttribute('aria-pressed', 'true');
+    }
+  }
+
+  // Update prizeboard UI
+  function updatePrizeboard() {
+    prizeboardElem.textContent = `Dinheiro atual: ${money}`;
+  }
+
+  // Update level UI
+  function setLevel() {
+    levelElem.textContent = `Pergunta ${currentQuestionIndex + 1} / ${questions.length}`;
+  }
+
+  // Shuffle an array in-place
+  function shuffleArray(array) {
+    for(let i=array.length-1; i>0; i--) {
+      const j = Math.floor(Math.random() * (i+1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  // Render current question and answers
+  function renderQuestion() {
+    canAnswer = true;
+    selectedAnswer = null;
+    nextBtn.style.display = 'none';
+    stopBtn.disabled = false;
+    overlayFader.style.display = 'none';
+    helpPopup.style.display = 'none';
+
+    // Enable lifelines that are still available
+    if(usedLifelines.skip < 3) lifelineSkip.classList.remove('disabled'); else lifelineSkip.classList.add('disabled');
+    if(!usedLifelines.placas) lifelinePlacas.classList.remove('disabled'); else lifelinePlacas.classList.add('disabled');
+    if(!usedLifelines.universitarios) lifelineUniversitarios.classList.remove('disabled'); else lifelineUniversitarios.classList.add('disabled');
+    if(!usedLifelines.cartas) lifelineCartas.classList.remove('disabled'); else lifelineCartas.classList.add('disabled');
+
+    const q = questions[currentQuestionIndex];
+    questionTextElem.textContent = q.question;
+
+    const answerIndices = [0,1,2,3];
+    const shuffledIndices = shuffleArray(answerIndices.slice());
+
+    currentShuffledAnswers = shuffledIndices.map(i => q.answers[i]);
+    currentCorrectAnswerIndex = shuffledIndices.indexOf(q.correctIndex);
+
+    answersElem.innerHTML = '';
+    currentShuffledAnswers.forEach((answer, i) => {
+      const card = document.createElement('button');
+      card.className = 'answer-card';
+      card.setAttribute('role', 'listitem');
+      card.setAttribute('tabindex', '0');
+      card.textContent = answer;
+      card.dataset.index = i;
+      card.addEventListener('click', () => selectAnswer(i));
+      card.addEventListener('keydown', e => {
+        if(e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          selectAnswer(i);
+        }
+      });
+      answersElem.appendChild(card);
+    });
+  }
+
+  // Select answer and process
+  function selectAnswer(index) {
+    if(!canAnswer) return;
+    selectedAnswer = index;
+    canAnswer = false;
+
+    nextBtn.style.display = 'inline-block';
+    stopBtn.disabled = true;
+
+    const cards = answersElem.querySelectorAll('.answer-card');
+    cards.forEach(card => card.classList.add('disabled'));
+
+    if(selectedAnswer === currentCorrectAnswerIndex) {
+      cards[selectedAnswer].classList.add('correct');
+      // Increase money to next level prize
+      money = prizeLevels[currentQuestionIndex];
+      if(guaranteedMilestones.includes(currentQuestionIndex)) {
+        moneySafe = money;
+      }
+      updatePrizeboard();
+      showHelpPopup('Você acertou! Pode continuar ou parar e levar o prêmio!');
+    }
+    else {
+      cards[selectedAnswer].classList.add('incorrect');
+      cards[currentCorrectAnswerIndex].classList.add('correct');
+      showHelpPopup('Você errou! Leva o prêmio seguro de ' + moneySafe);
+      gameOver(false);
+    }
+  }
+
+  // Go to next question or end game if done
+  function nextQuestion() {
+    if(selectedAnswer !== currentCorrectAnswerIndex) {
+      return; // wait for gameOver path
+    }
+    if(currentQuestionIndex < questions.length - 1) {
+      currentQuestionIndex++;
+      setLevel();
+      renderQuestion();
+    } else {
+      alert(`Parabéns! Você venceu o Show do Milhão e levou: ${money}!`);
+      location.reload();
+    }
+  }
+
+  // Stop game voluntarily and take current moneySafe or current money
+  function stopGame() {
+    // If player stops before any milestone, give zero or appropriate money
+    if(!moneySafe) moneySafe = "R$ 0";
+    alert(`Você decidiu parar e levar: ${moneySafe}. Parabéns!`);
+    location.reload();
+  }
+
+  // Use lifeline handler
+  function useLifeline(type) {
+    if(!canAnswer) return; // Can't lifeline after answering
+    if(usedLifelines[type]) return;
+
+    switch(type) {
+      case 'skip':
+        if(usedLifelines.skip >= 3) {
+          showHelpPopup('Limite de pulos atingido.');
+          return;
+        }
+        usedLifelines.skip++;
+        updateSkipCount();
+        showHelpPopup('Pergunta pulada! Avançando...');
+        setTimeout(() => {
+          currentQuestionIndex++;
+          if(currentQuestionIndex >= questions.length) {
+            alert(`Parabéns! Você venceu o Show do Milhão e levou: ${money}!`);
+            location.reload();
+            return;
+          }
+          setLevel();
+          renderQuestion();
+        }, 1000);
+        usedLifelines.skip = Math.min(3, usedLifelines.skip);
+        break;
+
+      case 'placas':
+        usedLifelines.placas = true;
+        lifelinePlacas.classList.add('disabled');
+        showHelpPopup('Placas mostram a resposta correta!');
+        highlightAnswer(currentCorrectAnswerIndex);
+        break;
+
+      case 'universitarios':
+        usedLifelines.universitarios = true;
+        lifelineUniversitarios.classList.add('disabled');
+        showHelpPopup('Universitários opinam sobre a resposta!');
+        showUniversitariosOpinion();
+        break;
+
+      case 'cartas':
+        usedLifelines.cartas = true;
+        lifelineCartas.classList.add('disabled');
+        showHelpPopup('Cartas eliminam duas respostas erradas!');
+        eliminateTwoWrongAnswers();
+        break;
+
+      default:
+        showHelpPopup('Ajuda não disponível.');
+    }
+  }
+
+  // Highlight answer card by glow (placas)
+  function highlightAnswer(index) {
+    const cards = answersElem.querySelectorAll('.answer-card');
+    cards.forEach(card => card.classList.remove('highlight-answer'));
+    if(index >= 0 && index < cards.length) {
+      cards[index].classList.add('highlight-answer');
+    }
+  }
+
+  // Show universitários opinion as bars for answers
+  function showUniversitariosOpinion() {
+    const cards = answersElem.querySelectorAll('.answer-card');
+    let probs = new Array(cards.length).fill(0);
+
+    const baseIncorrectMax = 30;
+    const correctProb = Math.floor(Math.random() * 40) + 60;
+    let sumIncorrect = 100 - correctProb;
+
+    for (let i = 0; i < cards.length; i++) {
+      if(i === currentCorrectAnswerIndex) {
+        probs[i] = correctProb;
+      } else {
+        probs[i] = Math.floor(Math.random() * Math.min(baseIncorrectMax, sumIncorrect));
+        sumIncorrect -= probs[i];
+      }
+    }
+    while(sumIncorrect > 0) {
+      for(let i = 0; i < cards.length; i++) {
+        if(i === currentCorrectAnswerIndex) continue;
+        if(sumIncorrect <= 0) break;
+        probs[i]++;
+        sumIncorrect--;
+      }
+    }
+
+    cards.forEach((card, i) => {
+      let opinionDiv = document.createElement('div');
+      opinionDiv.className = 'universitarios-bar';
+      opinionDiv.style.marginTop = '8px';
+      opinionDiv.style.background = 'rgba(255, 255, 255, 0.15)';
+      opinionDiv.style.borderRadius = '8px';
+      opinionDiv.style.overflow = 'hidden';
+
+      let bar = document.createElement('div');
+      bar.style.width = probs[i] + '%';
+      bar.style.height = '8px';
+      bar.style.background = i === currentCorrectAnswerIndex ? '#4caf50' : '#ff8000';
+      bar.style.transition = 'width 0.7s ease';
+
+      let label = document.createElement('div');
+      label.style.position = 'absolute';
+      label.style.right = '8px';
+      label.style.top = '-18px';
+      label.style.color = '#fff';
+      label.style.fontSize = '0.8rem';
+      label.style.fontWeight = '700';
+      label.textContent = probs[i] + '%';
+
+      opinionDiv.style.position = 'relative';
+      opinionDiv.appendChild(bar);
+      opinionDiv.appendChild(label);
+      card.appendChild(opinionDiv);
+    });
+
+    Array.from(cards).forEach(card => card.classList.add('disabled'));
+  }
+
+  // Eliminate two wrong answers for cartas lifeline
+  function eliminateTwoWrongAnswers() {
+    const cards = Array.from(answersElem.querySelectorAll('.answer-card'));
+    const wrongIndexes = cards.map((_, i) => i).filter(i => i !== currentCorrectAnswerIndex);
+    shuffleArray(wrongIndexes);
+    let toEliminate = wrongIndexes.slice(0, 2);
+
+    for (let idx of toEliminate) {
+      cards[idx].classList.add('disabled');
+      cards[idx].style.opacity = '0.4';
+    }
+  }
+
+  // Display floating help message
+  let helpPopupTimeout;
+  function showHelpPopup(message) {
+    helpPopup.style.display = 'block';
+    helpPopup.textContent = message;
+
+    if(helpPopupTimeout) clearTimeout(helpPopupTimeout);
+    helpPopupTimeout = setTimeout(() => {
+      helpPopup.style.display = 'none';
+    }, 4000);
+  }
+
+  // Game over - show final prize
+  function gameOver(won) {
+    canAnswer = false;
+    nextBtn.style.display = 'none';
+    stopBtn.disabled = true;
+
+    if(!won) {
+      // Lost by wrong answer - set prize to guaranteed floor
+      money = moneySafe;
+      updatePrizeboard();
+      alert(`Fim de jogo! Você errou e levou: ${moneySafe}.`);
+    } else {
+      alert(`Parabéns! Você venceu o Show do Milhão e levou: ${money}!`);
+    }
+    location.reload();
+  }
+
+  window.addEventListener('load', initGame);
+
+})();
+</script>
+</body>
+</html>
